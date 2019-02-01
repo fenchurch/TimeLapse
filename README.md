@@ -1,5 +1,6 @@
-#TimeLapse
-######Sequentially grab images from mjpeg stream
+# TimeLapse
+
+###### Sequentially grab images from mjpeg stream
 ---
 1. Pull Images from
 2. Label them sequentially, either by id, or by date. Not sure yet.
