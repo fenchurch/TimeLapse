@@ -1,0 +1,66 @@
+#!/bin/bash
+__scriptVersion=1.0
+__scriptPID=$$
+__scriptPath="$(cd "$(dirname "$0")"; pwd -P )"
+__scriptFile="$(basename "$0")"
+
+# Function ===================================================================== 
+#           Name:  image_capture
+#         Author:  Rusty Gibbs 
+#       Homepage:  http://www.wickedidol.com
+#            Git:  https://github.com/fenchurch/TimeLapse.git
+#        Created:  2019-02-02
+#       Modified:  2019-02-05
+# ==============================================================================
+usage="usage:
+    $__scriptFile"
+# default vars =============================================================={{{
+log="$__scriptPath/_log"
+# ===========================================================================}}}
+check_dependencies(){
+  if ! which ffmpeg 1>&-; then
+    echo "missing dependency: ffmpeg\nPlease install and try again"
+    exit 1
+  elif [ ! -e "$__scriptPath/../conf" ]; then
+    echo "Missing configuration file: ../conf"
+    exit 2
+  fi
+}
+
+get_camera_url(){
+    url=${CAMERA_URL:-$user_camera_url}
+    if [[ -z "$url" ]]; then
+        echo "You'll need to enter a camera URL into the conf file or with the -c|--camera_url flag"
+        exit 1
+    elif [[ ! -z "$CAMERA_USER" ]]; then
+        url="http://$CAMERA_USER:$CAMERA_PASS@${url/*:\/\//}"
+    fi
+    echo "$url"
+}
+main(){
+    check_dependencies
+    #Get Conf Variables
+    source "$__scriptPath/defaults"
+    source "$__scriptPath/../conf"
+    #Output Filename to stdout
+    output="${1:-$STORAGE_PATH/capture$(date +%s).jpg}"
+    #Get a single image from the camera
+    "$__scriptPath"/_log `ffmpeg -y -i "$(get_camera_url)" -vframes 1 -hide_banner "$output" 2>&1`
+    echo $output
+}
+
+while true; do
+    case "$1" in
+    --help      | -h ) echo "$usage"; exit 0;;
+    --version   | -V ) echo "$__scriptFile -- Version $__scriptVersion"; exit 0;;
+    --camera_url   | -c ) user_camera_url="$1"; shift 1;;
+    * ) break;;
+    esac
+done
+if [[ -t 0 && $# -eq 0 ]]; then
+    main
+    exit
+fi
+#echo "${@:-$(</dev/stdin)}" | while read line; do
+#    main "$line"
+#done

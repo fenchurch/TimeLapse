@@ -1,0 +1,15 @@
+#!/bin/bash
+[ ! -e conf ] && cp conf.orig conf || :
+source conf
+#set defaults
+log_file=${LOG_FILE:-/var/log/timelapse.log}
+storage_path=${STORAGE_PATH:-./storage}
+tmp_path=${TMP_PATH:-./tmp}
+
+for dir in "${STORAGE_PATH:-./storage}" "${TMP_PATH:-$tmp_path}"; do
+    [ ! -d "$dir" ] && mkdir "$dir"
+done
+
+for file in "${LOG_FILE:-/var/log/timelapse.log}"; do
+    [ ! -e "$file" ] && touch "$file"
+done

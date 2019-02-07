@@ -1,0 +1,10 @@
+#Camera Information
+CAMERA_URL=
+#CAMERA_USER=
+#CAMERA_PASS=
+
+#
+#TMP_PATH=./tmp
+#STORAGE_PATH=./storage
+#
+#LOG_FILE=/var/log/timelapse.log
