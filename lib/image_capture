@@ -43,7 +43,8 @@ main(){
     source "$__scriptPath/defaults"
     source "$__scriptPath/../conf"
     #Output Filename to stdout
-    output="${1:-$STORAGE_PATH/capture$(date +%s).jpg}"
+    output_path="${1:-$STORAGE_PATH}"
+    output="${output_path}/capture$(date +%s).jpg"
     #Get a single image from the camera
     "$__scriptPath"/_log `ffmpeg -y -i "$(get_camera_url)" -vframes 1 -hide_banner "$output" 2>&1`
     echo $output
@@ -61,6 +62,6 @@ if [[ -t 0 && $# -eq 0 ]]; then
     main
     exit
 fi
-#echo "${@:-$(</dev/stdin)}" | while read line; do
-#    main "$line"
-#done
+echo "${@:-$(</dev/stdin)}" | while read line; do
+    main "$line"
+done

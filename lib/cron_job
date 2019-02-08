@@ -1,0 +1,13 @@
+#!/bin/bash
+source defaults
+source ../conf
+$__scriptPath="$(cd "$(dirname "$0")"; pwd -P )"
+
+minutes=5/*
+hours=8-12
+days=*
+month=*
+dotw=mon,tue,wed,thu,fri
+
+( crontab -l 2>/dev/null; echo "#$minutes $hours $days $months $dotw \"$__scriptPath/image_capture\"" ) | crontab -
+

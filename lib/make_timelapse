@@ -1,0 +1,45 @@
+#!/bin/bash
+__scriptVersion=1.0
+__scriptPID=$$
+__scriptPath="$(cd "$(dirname "$0")"; pwd -P )"
+__scriptFile="$(basename "$0")"
+
+# Function ===================================================================== 
+#           Name:  make_timelapse
+#         Author:  Rusty Gibbs 
+#       Homepage:  http://www.wickedidol.com
+#            Git:  https://github.com/fenchurch/TimeLapse.git
+#        Created:  2019-02-02
+#       Modified:  2019-02-08
+# ==============================================================================
+usage="usage:
+    $__scriptFile arguments <input>"
+# default vars =============================================================={{{
+
+# ===========================================================================}}}
+
+main(){
+    #set the output file from either the argument or the conf or the default
+    output="${1:-$TIMELAPSE_OUTPUT_PATH}"
+    #copy the images from the date range to the tmp directory
+    start=${start:-$(date +%d/%M/%Y)};
+    #make the video 
+    ffmpeg -framerate ${framerate:-30} -pattern_type glob -i '../storage/*.jpg' -c:v libx264 -r 30 -pix_fmt yuv420p ../out.mp4   
+}
+while true; do
+    case "$1" in
+    --help        | -h ) usage; exit 0;;
+    --version    | -V ) echo "$__scriptFile -- Version $__scriptVersion"; exit 0;;
+    --start_date | -s ) start="$2"; shift 2;;
+    --end_date  | -e ) end="$2"; shift 2;;
+    --framerate | -f ) framerate="$2"; shift 2;;
+    * ) break;;
+    esac
+done
+if [[ -t 0 && $# -eq 0 ]]; then
+    main
+    exit 0
+fi
+echo "${@:-$(</dev/stdin)}" | while read line; do
+    main "$line"
+done
