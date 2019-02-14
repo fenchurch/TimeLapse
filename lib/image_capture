@@ -26,40 +26,42 @@ check_dependencies(){
     exit 2
   fi
 }
-
-get_camera_url(){
-    url=${CAMERA_URL:-$user_camera_url}
-    if [[ -z "$url" ]]; then
-        echo "You'll need to enter a camera URL into the conf file or with the -c|--camera_url flag"
-        exit 1
-    elif [[ ! -z "$CAMERA_USER" ]]; then
-        url="http://$CAMERA_USER:$CAMERA_PASS@${url/*:\/\//}"
-    fi
-    echo "$url"
-}
 main(){
     check_dependencies
     #Get Conf Variables
-    source "$__scriptPath/defaults"
-    source "$__scriptPath/../conf"
+    #
+    url="$1"
+    hostname="$( sed -e 's/^\(http:\/\/\)//' -e 's/.*@//' -e 's/\(\w*\)\/.*/\1/' <<< "$1" )"
     #Output Filename to stdout
-    output_path="${1:-$STORAGE_PATH}"
-    output="${output_path}/capture$(date +%s).jpg"
+    output="$(realpath "${storage_path:-$__scriptPath/../$STILLS_PATH}")"
+    output+="/$hostname - $(date +%s).jpg"
+
     #Get a single image from the camera
-    "$__scriptPath"/_log `ffmpeg -y -i "$(get_camera_url)" -vframes 1 -hide_banner "$output" 2>&1`
+    echo "Capturing Image from $hostname" 1>&2 
+    $log `ffmpeg -y -i "$url" -vframes 1 -hide_banner "$output" 2>&1`
     echo $output
 }
+source "$__scriptPath/defaults"
+source "$__scriptPath/../conf"
 
 while true; do
     case "$1" in
     --help      | -h ) echo "$usage"; exit 0;;
     --version   | -V ) echo "$__scriptFile -- Version $__scriptVersion"; exit 0;;
-    --camera_url   | -c ) user_camera_url="$1"; shift 1;;
+    --path   | -p ) storage_path="$1"; shift 1;;
     * ) break;;
     esac
 done
 if [[ -t 0 && $# -eq 0 ]]; then
-    main
+    if declare -p CAMERA_URL 2> /dev/null | grep -q '^declare \-a'; then
+        c=0
+        while [ $c -lt ${#CAMERA_URL[@]} ]; do
+            main "${CAMERA_URL[$c]}"
+            (( c++ ))
+        done
+    else
+        main "${CAMERA_URL}"
+    fi
     exit
 fi
 echo "${@:-$(</dev/stdin)}" | while read line; do

@@ -1,3 +1,4 @@
-TMP_PATH=../tmp
-STORAGE_PATH=../storage
+TMP_PATH=tmp
+STILLS_PATH=stills
+VIDEOS_PATH=videos
 LOG_FILE=/var/log/timelapse.log

@@ -17,23 +17,32 @@ usage="usage:
 # default vars =============================================================={{{
 
 # ===========================================================================}}}
-source ./defaults
-source ../conf
+source $__scriptPath/defaults
+source $__scriptPath/../conf
 main(){
     start_m=$(cut -d"/" -f1 <<< $1)
     start_d=$(cut -d"/" -f2 <<< $1)
     start_y=$(cut -d"/" -f3 <<< $1)
-    touch -t ${start_y}${start_m}${start_d}0000 ts-start
-    start="-newer ts-start "
+    [[ ${#start_m} == 1 ]] && start_m=0$start_m
+    [[ ${#start_d} == 1 ]] && start_d=0$start_d
+    [[ ${#start_y} == 1 ]] && start_y=0$start_y
+    touch -t ${start_y}${start_m}${start_d}0000 start
+
+    start="-newer start "
     if [[ "$2" != "" ]]; then
         end_m=$(cut -d "/" -f1 <<< $2)
         end_d=$(cut -d"/" -f2 <<< $2)
         end_y=$(cut -d"/" -f3 <<< $2)
-        touch -t ${end_y}${end_m}${end_d}2359 ts-end
-        end="! -newer ts-end "
+        [[ ${#end_m} == 1 ]] && end_m=0$end_m
+        [[ ${#end_d} == 1 ]] && end_d=0$end_d
+        [[ ${#end_y} == 2 ]] && end_y=20$end_y
+        touch -t ${end_y}${end_m}${end_d}2359 end
+    else
+        touch -t $(date +%Y%m%d2359) end
     fi 
-    find $(realpath "$STORAGE_PATH") -type f $start $end -exec echo {} ";"
-    rm ts-start ts-end
+    end="! -newer end "
+    find $(realpath "$__scriptPath/../$STILLS_PATH") -type f $start $end -exec echo {} ";" | sort
+    rm start end
 }
 if [[ $# -eq 0 ]]; then
     echo "$usage"

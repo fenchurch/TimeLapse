@@ -3,7 +3,7 @@
 source lib/defaults
 source conf
 #set defaults
-PATHS=( "$STORAGE_PATH" "$TMP_PATH" )
+PATHS=( "$STILLS_PATH" "$TMP_PATH" "$VIDEOS_PATH" )
 FILES=( "$LOG_FILE" )
 
 for dir in $PATHS; do
