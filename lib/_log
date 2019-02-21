@@ -12,11 +12,36 @@ __scriptFile="$(basename "$0")"
 #        Created:  2018-06-17
 #       Modified:  2018-06-17
 # ==============================================================================
+
+# usage & man ==============================================================={{{
 usage="usage:
-    $__scriptFile [-e|-l <logfile>] <input>"
+    $__scriptFile [--p|p <path>] [--name|-n] <camera_url>"
+man="
+NAME
+    $__scriptFile -- 
+
+SYNOPSIS
+    $__scriptFile [-flags] argument
+
+DESCRIPTION
+    $__scriptFile 
+
+    -f arg
+    --flag
+        flag description
+
+"
+# ===========================================================================}}}
+
+# source files =============================================================={{{
+source $__scriptPath/defaults
+source $__scriptPath/../conf
+# ===========================================================================}}}
 # default vars =============================================================={{{
 
 # ===========================================================================}}}
+
+
 main(){
     local head="[$(date +%F\ %T)] ($__scriptFile:$__scriptPID)"
     [[ $error_mode ]] && \
@@ -31,8 +56,7 @@ main(){
         echo "$head $@" >"$LOG_FILE"
     logger -i "$@"
 }
-source $__scriptPath/defaults
-source $__scriptPath/../conf
+
 
 while true; do
     case "$1" in

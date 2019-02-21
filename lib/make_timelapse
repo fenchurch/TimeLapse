@@ -12,47 +12,121 @@ __scriptFile="$(basename "$0")"
 #        Created:  2019-02-02
 #       Modified:  2019-02-08
 # ==============================================================================
+# usage & man ==============================================================={{{
 usage="usage:
-    $__scriptFile arguments <input>"
-# default vars =============================================================={{{
+    $__scriptFile [] <name>"
+manual="
+NAME
+    make_timelapse -- make timelapse h264 video of sequential images
 
+SYNOPSIS
+    make_timelapse [-d int | [-s date] [-e date]] [-f int] [-v path] [-i path] image_prefix
+
+    make_timelapse -h | --help 
+    
+    make_timelapse --version | -V 
+
+DESCRIPTION
+    make_timelapse uses sequnetial images from the image path defined in the config file
+
+    -d  int
+    --day_range
+        start date set to n days from today, end date set to today
+
+    -s  date in MM/DD/YYYY format
+    --start_date
+        sets the search criteria to find files starting at the set date
+
+    -e  date in MM/DD/YYYY format
+    --end_date
+        sets the search criteria to find files until the end of the set date
+
+    -f  int
+    --framerate
+        frames per second each image uses. eg 30 = .0333 seconds, 1 = 1 second
+
+    -v  path
+    --videos
+        path where outputed timelapse will be stored
+    
+    -i  path
+    --images
+        path where images for timelapse creation are stored
+
+    -h
+    --help
+        show this help file
+
+    -V
+    --version
+        version of this script
+
+EXAMPLE
+    
+    Timelapse the last week of images store in images path, prefixed with the name 'capture'
+    time_lapse -d 7 'capture'
+
+    Timelapse today
+    timelapse 'capture'
+
+    Timelapse from New Years Day to New Years eve last year at 5 fps
+    timelapse -s 01/01/2018 -e 12/31/2018 -f 5 'capture'
+
+"
 # ===========================================================================}}}
+# source files =============================================================={{{
 source "$__scriptPath/defaults"
 source "$__scriptPath/../conf"
-
+# ===========================================================================}}}
+# default vars =============================================================={{{
 log="$__scriptPath/_log"
-tmp="$__scriptPath/../${TMP_PATH}"
-
+tmp_path="$(realpath "$__scriptPath/../${TMP_PATH}")"
+images_path="$(realpath "$__scriptPath/../$IMAGES_PATH")"
+videos_path="$(realpath "$__scriptPath/../$VIDEOS_PATH")"
+day_range=1
+# ===========================================================================}}}
 find_daterange(){
     if [[ $start =~ ([0-9]{1,2})/([0-9]{1,2})/([0-9]{2,4}) ]]; then
-        [[ ${#BASH_REMATCH[1]} == 1 ]] && m=0${BASH_REMATCH[1]}
-        [[ ${#BASH_REMATCH[2]} == 1 ]] && d=0${BASH_REMATCH[2]}
-        [[ ${#BASH_REMATCH[3]} == 1 ]] && y=0${BASH_REMATCH[3]}
+        m=$(leading_zeros ${BASH_REMATCH[1]})
+        d=$(leading_zeros ${BASH_REMATCH[2]})
+        y=$(leading_zeros ${BASH_REMATCH[3]})
         touch -t ${y}${m}${d}0000 start
+        start_find="-newer start"
     fi
     if [[ $end =~ ([0-9]{1,2}/[0-9]{1,2}/[0-9]{2,4}) ]]; then
-        [[ ${#BASH_REMATCH[1]} == 1 ]] && m=0${BASH_REMATCH[1]}
-        [[ ${#BASH_REMATCH[2]} == 1 ]] && d=0${BASH_REMATCH[2]}
-        [[ ${#BASH_REMATCH[3]} == 1 ]] && y=0${BASH_REMATCH[3]}
+        m=$(leading_zeros ${BASH_REMATCH[1]})
+        d=$(leading_zeros ${BASH_REMATCH[2]})
+        y=$(leading_zeros ${BASH_REMATCH[3]})
         touch -t ${y}${m}${d}2359 end
-        end_find="! -newer end "
+        end_find="! -newer end"
     fi
-    find $(realpath "$__scriptPath/../$STILLS_PATH") -type f -name "$@*" \
-        -newer start $end_find -exec echo {} ";" | sort
-    
-
+    find "$images_path" -type f -name "$@*" $start_find $end_find -exec echo {} ";" | sort
+    [ -f start ] && rm start
+    [ -f end ] && rm end
 }
-
+leading_zeros(){
+    digits=${2:-2}
+    [[ ${#1} -lt $digits ]] \
+        && printf "0%.0s${1}" {1..$digits} \
+        || echo $1
+}
+days_ago(){
+    days="$1"
+    ! [[ "$days" =~ ^[0-9]+$ ]] && days=0 || :
+    [[ `uname` == Darwin ]] \
+        && date -v-${1}d +%m/%d/%Y \
+        || date +%m/%d/%Y -d "${1} day ago"
+}
 main(){
+    #if start isnt defined
+    [ -z $start ] && start=$(days_ago $day_range)
+    find_daterange "$@"
     #copy the images from the date range to the tmp directory
-    start=${start:-$( [[ `uname` == Darwin ]] && date -v-1d +%m/%d/%Y || date +%m/%d/%Y -d "yesterday")};
-    #make the video 
-    for f in $( $__scriptPath/date_range $start $end); do
-        mv "$f" "$tmp"
+    for f in $( find_daterange "$@" ); do
+        mv "$f" "$tmp_path"
     done
-
-    output="${1:-$__scriptPath/../$VIDEOS_PATH}/timelapse ${start//\//-}"
-    if [ -n "$end" ]; then
+    output="$videos_path/$@ ${start//\//-}"
+    if [ -n $end ]; then
         output+=" to ${end//\//-}"
     else
         output+=" to $(date +%m-%d-%Y)"
@@ -61,7 +135,7 @@ main(){
     #create the timelapse from the images we just moved to tmp
     ffmpeg -hide_banner\
         -framerate ${framerate:-30}\
-        -pattern_type glob -i "$tmp/*.jpg"\
+        -pattern_type glob -i "$tmp_path/$@*.jpg"\
         -c:v libx264\
         -r 30\
         -pix_fmt yuv420p\
@@ -69,16 +143,18 @@ main(){
 
     echo "$output"
 
-    mv "$tmp"/* "$__scriptPath/../${STILLS_PATH}"
+    mv "$tmp_path"/"$@"* "$images_path"
 }
-
 while true; do
     case "$1" in
     --help      | -h ) usage; exit 0;;
     --version   | -V ) echo "$__scriptFile -- Version $__scriptVersion"; exit 0;;
     --start_date| -s ) start="$2"; shift 2;;
     --end_date  | -e ) end="$2"; shift 2;;
+    --day_range | -d ) day_range="$2"; shift 2;;
     --framerate | -f ) framerate="$2"; shift 2;;
+    --videos    | -v ) videos_path="$2"; shift 2;;
+    --images    | -i ) images_path="$2"; shift 2;;
     * ) break;;
     esac
 done

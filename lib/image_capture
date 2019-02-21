@@ -13,7 +13,15 @@ __scriptFile="$(basename "$0")"
 #       Modified:  2019-02-05
 # ==============================================================================
 usage="usage:
-    $__scriptFile"
+    $__scriptFile [--p|p <path>] [--name|-n] <camera_url>"
+
+
+# default vars =============================================================={{{
+source "$__scriptPath/defaults"
+source "$__scriptPath/../conf"
+# ===========================================================================}}}
+
+images_path="$(realpath "$__scriptPath/../$IMAGES_PATH")"
 # default vars =============================================================={{{
 log="$__scriptPath/_log"
 # ===========================================================================}}}
@@ -28,41 +36,35 @@ check_dependencies(){
 }
 main(){
     check_dependencies
-    #Get Conf Variables
-    #
-    url="$1"
-    hostname="$( sed -e 's/^\(http:\/\/\)//' -e 's/.*@//' -e 's/\(\w*\)\/.*/\1/' <<< "$1" )"
+    #if name is not set, use the hostname
+    [ -z $name ] && name="$( sed \
+        -e 's/^\(http:\/\/\)//' \
+        -e 's/.*@//' \
+        -e 's/\(\w*\)\/.*/\1/' \
+        <<< "$1" )";
+    
     #Output Filename to stdout
-    output="$(realpath "${storage_path:-$__scriptPath/../$STILLS_PATH}")"
-    output+="/$hostname - $(date +%s).jpg"
+    output+="$images_path/$name - $(date +%s).jpg"
 
     #Get a single image from the camera
-    echo "Capturing Image from $hostname" 1>&2 
-    $log `ffmpeg -y -i "$url" -vframes 1 -hide_banner "$output" 2>&1`
+    echo "Capturing Image from $1" 1>&2 
+    $log `ffmpeg -y -i "$1" -vframes 1 -hide_banner "$output" 2>&1`
     echo $output
 }
-source "$__scriptPath/defaults"
-source "$__scriptPath/../conf"
+
 
 while true; do
     case "$1" in
-    --help      | -h ) echo "$usage"; exit 0;;
-    --version   | -V ) echo "$__scriptFile -- Version $__scriptVersion"; exit 0;;
-    --path   | -p ) storage_path="$1"; shift 1;;
+    --help  | -h ) echo "$usage"; exit 0;;
+    --version| -V ) echo "$__scriptFile -- Version $__scriptVersion"; exit 0;;
+    --path  | -p ) images_path="$2"; shift 2;;
+    --name  | -n ) name="$2"; shift 2;;
     * ) break;;
     esac
 done
 if [[ -t 0 && $# -eq 0 ]]; then
-    if declare -p CAMERA_URL 2> /dev/null | grep -q '^declare \-a'; then
-        c=0
-        while [ $c -lt ${#CAMERA_URL[@]} ]; do
-            main "${CAMERA_URL[$c]}"
-            (( c++ ))
-        done
-    else
-        main "${CAMERA_URL}"
-    fi
-    exit
+    echo "$usage"
+    exit 1
 fi
 echo "${@:-$(</dev/stdin)}" | while read line; do
     main "$line"
