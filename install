@@ -7,9 +7,9 @@ PATHS=( "$STILLS_PATH" "$TMP_PATH" "$VIDEOS_PATH" )
 FILES=( "$LOG_FILE" )
 
 for dir in $PATHS; do
-    [ ! -d "$dir" ] && mkdir "$dir"
+    [ ! -d "$dir" ] && sudo mkdir -p "$dir"
 done
 
 for file in $FILES; do
-    [ ! -e "$file" ] && touch "$file"
+    [ ! -e "$file" ] && sudo touch "$file"
 done
