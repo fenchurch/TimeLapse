@@ -1,13 +1,29 @@
 #!/bin/bash
-source defaults
-source ../conf
-$__scriptPath="$(cd "$(dirname "$0")"; pwd -P )"
+__scriptPath="$(cd "$(dirname "$0")"; pwd -P )"
+source "$__scriptPath/defaults"
+source "$__scriptPath/../conf"
 
-minutes=5/*
-hours=8-12
-days=*
-month=*
-dotw=mon,tue,wed,thu,fri
-
-( crontab -l 2>/dev/null; echo "#$minutes $hours $days $months $dotw \"$__scriptPath/image_capture\"" ) | crontab -
-
+capture_frequency="1/* 8-17 * * mon,tue,wed,thu,fri"
+timelapse_frequency="59 23 * * sun"
+email_frequency="0 8 * * mon"
+case "$1" in
+     capture | timelapse )
+        for camera in "${CAMERA_URLS[@]}"; do
+            if [[ "$1" == capture ]]; then
+                "$__scriptPath/image_capture " -n "${camera%%=*}" "${camera#*=}"
+            elif [[ "$1" == timelapse ]]; then
+                "$__scriptPath/make_timelapse" -d 7 "${camera%%=*}"
+            fi
+        done
+        ;;
+    email )
+        "$__scriptPath/send_email"
+        ;;
+    job )
+        ( crontab -l 2>/dev/null
+        echo "$CAPTURE_FREQ '$__scriptPath capture'"
+        echo "$TIMELAPSE_FREQ '$__scriptPath timelapse'"
+        echo "$EMAIL_FREQ '$__scriptPath email'"
+        ) | crontab -
+        ;;
+esac

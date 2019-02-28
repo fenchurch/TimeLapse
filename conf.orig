@@ -1,7 +1,5 @@
-    #Camera Information
-CAMERA_URL=
-#CAMERA_USER=
-#CAMERA_PASS=
+#Camera Information
+#CAMERA_URLS=( [camera_name]=http://cameraurl/mjpg/video.mjpg )
 
 #TMP_PATH=tmp
 #STILLS_PATH=stills
