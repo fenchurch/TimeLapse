@@ -3,13 +3,12 @@
 source lib/defaults
 source conf
 #set defaults
-PATHS=( "$STILLS_PATH" "$TMP_PATH" "$VIDEOS_PATH" )
+PATHS=( "$IMAGES_PATH" "$TMP_PATH" "$VIDEOS_PATH" )
 FILES=( "$LOG_FILE" )
 
-for dir in $PATHS; do
+for dir in ${PATHS[@]}; do
     [ ! -d "$dir" ] && sudo mkdir -p "$dir"
 done
 
-for file in $FILES; do
-    [ ! -e "$file" ] && sudo touch "$file"
-done
+sudo touch "$LOG_FILE"
+sudo chown $(whoami) "$LOG_FILE"

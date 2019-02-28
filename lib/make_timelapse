@@ -78,6 +78,7 @@ EXAMPLE
 source "$__scriptPath/defaults"
 source "$__scriptPath/../conf"
 # ===========================================================================}}}
+realpath(){ echo "$(builtin cd $(dirname "$@") && pwd -P)/$(basename "$@")"; }
 # default vars =============================================================={{{
 log="$__scriptPath/_log"
 tmp_path="$(realpath "$__scriptPath/../${TMP_PATH}")"

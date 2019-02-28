@@ -1,6 +1,6 @@
-CAPTURE_FREQ="1/* 8-17 * * mon,tue,wed,thu,fri"
-TIMELAPSE_FREQ="59 23 * * sun"
-EMAIL_FREQ="0 8 * * mon"
+CAPTURE_FREQ='*/1 8-17 * * mon,tue,wed,thu,fri'
+TIMELAPSE_FREQ='0 0 * * sun'
+EMAIL_FREQ='0 8 * * mon'
 
 TMP_PATH=tmp
 IMAGES_PATH=images

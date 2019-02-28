@@ -1,15 +1,14 @@
 #!/bin/bash
 __scriptPath="$(cd "$(dirname "$0")"; pwd -P )"
+__self="$__scriptPath/$(basename "$0")"
 source "$__scriptPath/defaults"
 source "$__scriptPath/../conf"
 
-echo "$1";
 case "$1" in
      "capture" | "timelapse")
-        echo "${CAMERA_URLS[@]}"
         for camera in "${CAMERA_URLS[@]}"; do
             if [[ "$1" == capture ]]; then
-                "$__scriptPath/image_capture" -n "${camera%%=*}" "${camera#*=}"
+            	"$__scriptPath/image_capture" -n "${camera%%=*}" "${camera#*=}"
             elif [[ "$1" == timelapse ]]; then
                 "$__scriptPath/make_timelapse" -d 7 "${camera%%=*}"
             fi
@@ -19,10 +18,12 @@ case "$1" in
         "$__scriptPath/send_email"
         ;;
     job )
-        ( crontab -l 2>/dev/null
-        echo "${CAPTURE_FREQ:-1/* 8-16 * * 1-5} '$__scriptPath capture'"
-        echo "${TIMELAPSE_FREQ:-0 0 * * 0} '$__scriptPath timelapse'"
-        echo "${EMAIL_FREQ:-0 8 * * 1} '$__scriptPath email'"
-        ) | crontab -
-        ;;
+        ( 
+	crontab -l 2>/dev/null
+	cat <<-JOB
+		$CAPTURE_FREQ $__self capture
+		$TIMELAPSE_FREQ $__self timelapse
+		$EMAIL_FREQ $__self email
+	JOB
+	) | crontab -
 esac

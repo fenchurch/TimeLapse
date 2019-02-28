@@ -21,10 +21,13 @@ source "$__scriptPath/defaults"
 source "$__scriptPath/../conf"
 # ===========================================================================}}}
 
-images_path="$(realpath "$__scriptPath/../$IMAGES_PATH")"
+
+images_path="$__scriptPath/../$IMAGES_PATH"
+
 # default vars =============================================================={{{
 log="$__scriptPath/_log"
 # ===========================================================================}}}
+realpath(){ echo "$(builtin cd $(dirname "$1") && pwd -P)/$(basename "$1")"; }
 check_dependencies(){
   if ! which ffmpeg 1>&-; then
     echo "missing dependency: ffmpeg\nPlease install and try again"
@@ -45,11 +48,11 @@ main(){
     
     #Output Filename to stdout
     output+="$images_path/$name - $(date +%s).jpg"
-
+    output="$(realpath "$output")"
     #Get a single image from the camera
     echo "Capturing Image from $1" 1>&2 
     $log `ffmpeg -y -i "$1" -vframes 1 -hide_banner "$output" 2>&1`
-    echo $output
+    echo "$output"
 }
 
 
