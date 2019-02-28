@@ -121,16 +121,15 @@ days_ago(){
 main(){
     #if start isnt defined
     [ -z $start ] && start=$(days_ago $day_range)
-    find_daterange "$@"
     #copy the images from the date range to the tmp directory
-    for f in $( find_daterange "$@" ); do
-        mv "$f" "$tmp_path"
+    find_daterange "$@" | while read file; do
+        mv "$file" "$tmp_path"
     done
     output="$videos_path/$@ ${start//\//-}"
-    if [ -n $end ]; then
-        output+=" to ${end//\//-}"
-    else
+    if [ -z $end ]; then
         output+=" to $(date +%m-%d-%Y)"
+    else
+        output+=" to ${end//\//-}"
     fi
     output+=.mp4
     #create the timelapse from the images we just moved to tmp
