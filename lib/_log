@@ -53,7 +53,7 @@ main(){
     [[ -z "$LOG_FILE" || $error_mode || $cast_mode ]] &&\
         echo -e "${pre}${@}${post}" 1>&2
     [[ -n "$LOG_FILE" ]] &&\
-        echo "$head $@" >"$LOG_FILE"
+        echo "$head $@" >>"$LOG_FILE"
     logger -i "$@"
 }
 

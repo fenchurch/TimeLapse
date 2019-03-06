@@ -91,19 +91,19 @@ find_daterange(){
         m=$(leading_zeros ${BASH_REMATCH[1]})
         d=$(leading_zeros ${BASH_REMATCH[2]})
         y=$(leading_zeros ${BASH_REMATCH[3]})
-        touch -t ${y}${m}${d}0000 start
-        start_find="-newer start"
+        touch -t ${y}${m}${d}0000 "$tmp_path/start"
+        start_find="-newer $tmp_path/start"
     fi
     if [[ $end =~ ([0-9]{1,2}/[0-9]{1,2}/[0-9]{2,4}) ]]; then
         m=$(leading_zeros ${BASH_REMATCH[1]})
         d=$(leading_zeros ${BASH_REMATCH[2]})
         y=$(leading_zeros ${BASH_REMATCH[3]})
         touch -t ${y}${m}${d}2359 end
-        end_find="! -newer end"
+        end_find="! -newer $tmp_path/end"
     fi
     find "$images_path" -type f -name "$@*" $start_find $end_find -exec echo {} ";" | sort
-    [ -f start ] && rm start
-    [ -f end ] && rm end
+    [ -f "$tmp_path/start" ] && rm "$tmp_path/start"
+    [ -f "$tmp_path/end" ] && rm "$tmp_path/end"
 }
 leading_zeros(){
     digits=${2:-2}
@@ -142,8 +142,12 @@ main(){
         "$output"
 
     echo "$output"
-
-    mv "$tmp_path"/"$@"* "$images_path"
+    cd "$tmp_path"
+    zip="$(basename "${output %.*}")"
+    mkdir "$tmp_path/$zip"
+    mv "$tmp_path"/*.jpg "$tmp_path/$zip" 
+    zip -r "$videos_path/$zip".zip "$zip"
+    mv "$tmp_path/$zip/$@"* "$images_path"
 }
 while true; do
     case "$1" in
