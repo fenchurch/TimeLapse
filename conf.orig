@@ -1,6 +1,6 @@
 #Camera Information
 #CAMERA_URLS=( [camera_name]=http://cameraurl/mjpg/video.mjpg )
-
+#STORAGE_SERVER="[-i IdenityFileIfNeeded] [user@]server"
 #TMP_PATH=tmp
 #STILLS_PATH=stills
 #VIDEOS_PATH=videos
