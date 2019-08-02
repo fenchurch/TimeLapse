@@ -7,10 +7,15 @@ source "$__scriptPath/../conf"
 case "$1" in
      "capture" | "timelapse")
         for camera in "${CAMERA_URLS[@]}"; do
+            camera_name="${camera%%=*}"
+            camera_url="${camera#*=}"
             if [[ "$1" == capture ]]; then
-            	"$__scriptPath/image_capture" -n "${camera%%=*}" "${camera#*=}"
+            	"$__scriptPath/image_capture" -n "$camera_name" "$camera_url"
             elif [[ "$1" == timelapse ]]; then
-                "$__scriptPath/make_timelapse" -d 7 "${camera%%=*}"
+                #This weeks progress
+                "$__scriptPath/make_timelapse" -d 7 "$camera_name"
+                #From the start of time
+                "$__scriptPath/make_timelapse" -s 01/01/2000 -o "$camera_name" "$cammera_name"
             fi
         done
         ;;

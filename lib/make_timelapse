@@ -53,6 +53,10 @@ DESCRIPTION
     --images
         path where images for timelapse creation are stored
 
+    -o  string
+    --override_name
+        override the output name
+
     -h
     --help
         show this help file
@@ -119,19 +123,24 @@ days_ago(){
         || date +%m/%d/%Y -d "${1} day ago"
 }
 main(){
-    #if start isnt defined
-    [ -z $start ] && start=$(days_ago $day_range)
+    #if start isnt defined, check if day_range is set, 
+    if [ -z $start ]; then
+        start=$(days_ago $day_range)
+        $log "Start: $start, End: $end"     
+    fi
     #copy the images from the date range to the tmp directory
     find_daterange "$@" | while read file; do
         mv "$file" "$tmp_path"
     done
-    output="$videos_path/$@ ${start//\//-}"
+    output="$@ ${start//\//-}"
     if [ -z $end ]; then
         output+=" to $(date +%m-%d-%Y)"
     else
         output+=" to ${end//\//-}"
     fi
-    output+=.mp4
+    [ ! -z "$override_name" ] && output="$override_name";
+    output="$videos_path/$output"
+
     #create the timelapse from the images we just moved to tmp
     ffmpeg -hide_banner\
         -framerate ${framerate:-30}\
@@ -139,16 +148,26 @@ main(){
         -c:v libx264\
         -r 30\
         -pix_fmt yuv420p\
-        "$output" 
+        -y\
+        "$output".mp4
 
     echo "$output"
     cd "$tmp_path"
-    zip="$(basename "${output%.*}")"
-    mkdir "$tmp_path/$zip"
-    mv *.jpg "$tmp_path/$zip/" 
-    zip -r "$videos_path/$zip".zip "$zip"
-    mv "$tmp_path/$zip/$@"* "$images_path"
-    rm -r "$tmp_path/$zip"
+    mkdir "$tmp_path/$output"
+    mv *.jpg "$tmp_path/$output/" 
+    zip -r "$videos_path/$output".zip "$output"
+    mv "$tmp_path/$output/$@"* "$images_path"
+    rm -r "$tmp_path/$output"
+    #create a timelapse of all the images
+    ffmpeg -hide_banner\
+        -framerate ${framerate:-120}\
+        -pattern_type glob -i "$images_path/$@*.jpg"\
+        -c:v libx264\
+        -r 30\
+        -pix_fmt yuv420p\
+        -y\
+        "$output".mp4
+   
 }
 while true; do
     case "$1" in
@@ -160,6 +179,7 @@ while true; do
     --framerate | -f ) framerate="$2"; shift 2;;
     --videos    | -v ) videos_path="$2"; shift 2;;
     --images    | -i ) images_path="$2"; shift 2;;
+    --override_name  | -o ) override_name="$2"; shift 2;;
     * ) break;;
     esac
 done

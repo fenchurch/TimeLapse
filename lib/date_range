@@ -19,6 +19,7 @@ usage="usage:
 # ===========================================================================}}}
 source $__scriptPath/defaults
 source $__scriptPath/../conf
+realpath(){ echo "$(builtin cd $(dirname "$@") && pwd -P)/$(basename "$@")"; }
 main(){
     start_m=$(cut -d"/" -f1 <<< $1)
     start_d=$(cut -d"/" -f2 <<< $1)
@@ -41,8 +42,8 @@ main(){
         touch -t $(date +%Y%m%d2359) end
     fi 
     end="! -newer end "
-    find $(realpath "$__scriptPath/../$STILLS_PATH") -type f $start $end -exec echo {} ";" | sort
-    rm start end
+    find $(realpath "$__scriptPath/../$IMAGES_PATH") -type f $start $end -exec echo {} ";" | sort
+    #rm -rf start end
 }
 if [[ $# -eq 0 ]]; then
     echo "$usage"
