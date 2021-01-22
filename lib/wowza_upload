@@ -1,0 +1,18 @@
+#!/bin/bash
+__scriptVersion=1.0
+__scriptPID=$$
+__scriptPath="$(cd "$(dirname "$0")"; pwd -P )"
+__scriptFile="$(basename "$0")"
+
+# Function ===================================================================== 
+#           Name:  make_timelapse
+#         Author:  Rusty Gibbs 
+#       Homepage:  http://www.wickedidol.com
+#            Git:  https://github.com/fenchurch/TimeLapse.git
+#        Created:  2019-02-02
+#       Modified:  2019-02-08
+# ==============================================================================
+# usage & man ==============================================================={{{
+usage="usage:
+    $__scriptFile [] <name>"
+m

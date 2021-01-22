@@ -1,0 +1,64 @@
+#!/bin/bash
+__scriptVersion=1.0
+__scriptPID=$$
+__scriptPath="$(cd "$(dirname "$0")"; pwd -P )"
+__scriptFile="$(basename "$0")"
+
+# Function ===================================================================== 
+#           Name:  date_range
+#         Author:  Rusty Gibbs 
+#       Homepage:  http://www.wickedidol.com
+#            Git:  https://github.com/fenchurch/TimeLapse.git
+#        Created:  2019-02-02
+#       Modified:  2019-02-08
+# ==============================================================================
+usage="usage:
+    $__scriptFile time [span of minutes]"
+# default vars =============================================================={{{
+
+# ===========================================================================}}}
+source $__scriptPath/defaults
+source $__scriptPath/../conf
+realpath(){ echo "$(builtin cd $(dirname "$@") && pwd -P)/$(basename "$@")"; }
+leading_zeros(){
+    digits=${2:-2}
+    if [[ ${#1} -lt $digits ]]; then
+        printf "0%.0s#{1}" {1..$digits}
+        return
+    fi
+#    echo $1
+}
+epoch_time(){
+#echo
+    [[ `uname` == Darwin ]] \
+	&& date -j -u -f "%T" "$1" +%s\
+	|| date -d "$1" +%s
+
+}
+
+main(){
+#echo
+    path=$(realpath "$__scriptPath/../$IMAGES_PATH")
+    start_time=$(epoch_time $1 )
+    end_time=$(( $start_time + ${2:-1}*60 )) 
+    ls "$path/$prefix"* | while read file; do
+	file_time=$(epoch_time $(stat -c %y "$file" | cut -d. -f1 | cut -d\  -f2 ) )
+	[[ $file_time -gt $start_time && $file_time -lt $end_time ]] \
+		&& basename "$file";# - $(stat -c %y "$file" | cut -d\  -f1 ) $file_time $start_time $end_time
+    done
+}
+if [[ $# -eq 0 ]]; then
+    echo "$usage"
+    exit 1
+fi
+
+while true; do
+    case "$1" in
+    --help      | -h ) echo "$manual"; exit 0;;
+    --version   | -V ) echo "$__scriptFile -- Version $__scriptVersion"; exit 0;;
+    --prefix | -p ) prefix="$2"; shift 2;;
+    * ) break;;
+    esac
+done
+
+main "$1" "${2:-}"
