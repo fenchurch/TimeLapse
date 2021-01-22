@@ -88,9 +88,32 @@ log="$__scriptPath/_log"
 tmp_path="$(realpath "$__scriptPath/../${TMP_PATH}")"
 images_path="$(realpath "$__scriptPath/../$IMAGES_PATH")"
 videos_path="$(realpath "$__scriptPath/../$VIDEOS_PATH")"
-day_range=1
+framerate=30
+bitrate=25
+fps=30
+
 # ===========================================================================}}}
-find_daterange(){
+# helper functions =========================================================={{{
+epoch(){
+    [[ `uname` == Darwin ]] && date -j -u -f "%T" "$@" +%s || date -d "$@" +%s
+}
+leading_zeros(){
+    digits=${2:-2}
+    [[ ${#1} -lt $digits ]] \
+        && printf "0%.0s${1}" {1..$digits} \
+        || echo $1
+}
+days_ago(){
+    days="$1"
+    [[ "$days" =~ ^[0-9]+$ ]] || days=0
+    [[ `uname` == Darwin ]] \
+        && echo $(date -v-${days}d +%m/%d/%Y) \
+        || echo $(date +%m/%d/%Y -d "${days} day ago")
+}
+# ===========================================================================}}}
+
+find_images_by_daterange(){
+
     if [[ $start =~ ([0-9]{1,2})/([0-9]{1,2})/([0-9]{2,4}) ]]; then
         m=$(leading_zeros ${BASH_REMATCH[1]})
         d=$(leading_zeros ${BASH_REMATCH[2]})
@@ -109,80 +132,117 @@ find_daterange(){
     [ -f "$tmp_path/start" ] && rm "$tmp_path/start"
     [ -f "$tmp_path/end" ] && rm "$tmp_path/end"
 }
-leading_zeros(){
-    digits=${2:-2}
-    [[ ${#1} -lt $digits ]] \
-        && printf "0%.0s${1}" {1..$digits} \
-        || echo $1
+find_images_by_timeofday(){
+	time0=$(epoch $time_of_day) 
+	time1=$(( $time0 + ${2:-1}*60 ))
+	ls "$images_path/$1"* | while read file; do
+	    file_time=$(epoch $(stat -c %y "$file" | cut -d. -f1 | cut -d\  -f2 ) )	
+	    [[ $file_time -gt $time0 && $file_time -lt $time1 ]] \
+	    && basename "$file"
+	done
 }
-days_ago(){
-    days="$1"
-    ! [[ "$days" =~ ^[0-9]+$ ]] && days=0 || :
-    [[ `uname` == Darwin ]] \
-        && date -v-${1}d +%m/%d/%Y \
-        || date +%m/%d/%Y -d "${1} day ago"
+rename(){
+	filename="$@"
+	if [[ ! -z "$override_name" ]]; then
+		filename="$override_name"
+	elif [[ ! -z "$time_of_day" ]]; then
+		filename="$@ - $time_of_day"
+	else
+		filename="$@ - ${start//\//-}"
+		if [ -z $end ]; then
+			filename+=" to $(date +%m-%d-%Y)"
+		else
+			filename+=" to ${end//\//-}"
+		fi
+	fi
+	echo $filename;
 }
-main(){
-    #if start isnt defined, check if day_range is set, 
-    if [ -z $start ]; then
-        start=$(days_ago $day_range)
-        $log "Start: $start, End: $end"     
-    fi
-    #copy the images from the date range to the tmp directory
-    find_daterange "$@" | while read file; do
-        mv "$file" "$tmp_path"
+move_file_list(){
+    src="$1"; shift
+    dest="$1"; shift
+
+    echo "$@" | while read file; do
+	mv "$src/$file" "$dest"
     done
-    output="$@ ${start//\//-}"
-    if [ -z $end ]; then
-        output+=" to $(date +%m-%d-%Y)"
-    else
-        output+=" to ${end//\//-}"
-    fi
-    [ ! -z "$override_name" ] && output="$override_name";
-    output="$videos_path/$output"
-
-    #create the timelapse from the images we just moved to tmp
-    ffmpeg -hide_banner\
-        -framerate ${framerate:-30}\
-        -pattern_type glob -i "$tmp_path/$@*.jpg"\
-        -c:v libx264\
-        -r 30\
-        -pix_fmt yuv420p\
-        -y\
-        "$output".mp4
-
-    echo "$output"
-    cd "$tmp_path"
-    mkdir "$tmp_path/$output"
-    mv *.jpg "$tmp_path/$output/" 
-    zip -r "$videos_path/$output".zip "$output"
-    mv "$tmp_path/$output/$@"* "$images_path"
-    rm -r "$tmp_path/$output"
-    #create a timelapse of all the images
-    ffmpeg -hide_banner\
-        -framerate ${framerate:-120}\
-        -pattern_type glob -i "$images_path/$@*.jpg"\
-        -c:v libx264\
-        -r 30\
-        -pix_fmt yuv420p\
-        -y\
-        "$output".mp4
-   
 }
+make_video(){
+    ffmpeg -hide_banner -y\
+	-framerate ${framerate:-30}\
+	-patern_type glob
+	-i "$tmp_path/*"\
+	-c:v libx264\
+	-pix_fmt yuv420p\
+	-cbr ${bitrate:-25}\
+	-r ${fps:-30}\
+	"$videos_path/$file_name".mp4
+}
+make_archive(){ 
+	cd "$tmp_path"
+	zip -r "$videos_path/$file_name".zip *; 
+}
+
+# main function ============================================================={{{
+
+main(){
+    
+	#if start isnt defined, check if day_range is set, 
+	if [ -z $start ]; then
+		start=$(days_ago $day_range)
+	fi
+	if [[ -n $time_of_day ]]; then 
+		file_list="$( find_images_by_timeofday $@)";	
+	else
+		if [[ -n $day_range ]]; then 
+			start=${start:-$(days_ago $day_range)}
+			end=${end:-$(days_ago 0)}
+		fi
+		file_list="$( find_images_by_daterange $@ )";
+	fi
+	$log "Start: $start - End: $end"
+	echo "$file_list"
+	exit
+ 
+	file_name="$(rename $@)"
+	tmp_path="$tmp_path/$@"
+	$log Moving File List
+	move_file_list "$images_path" "$tmp_path" $file_list
+
+	$log Making Video: $videos_path/$file_name.mp4
+	make_video
+	$log Made Video: $videos_path/$file_name.mp4
+	$log Making Archive
+	make_archive
+	$log Archive Complete
+	$log Moving images back to $images_poth from $tmp_path 
+	mv "$tmp_path"/* $images_path
+	echo rm -r $tmp_path	
+
+}
+
+# ===========================================================================}}}
 while true; do
     case "$1" in
-    --help      | -h ) echo "$manual"; exit 0;;
-    --version   | -V ) echo "$__scriptFile -- Version $__scriptVersion"; exit 0;;
     --start_date| -s ) start="$2"; shift 2;;
     --end_date  | -e ) end="$2"; shift 2;;
     --day_range | -d ) day_range="$2"; shift 2;;
+    --time_of_day	| -t ) time_of_day="$2"; shift 2;;
+
+    --override_name 	| -o ) override_name="$2"; shift 2;;
+
+    --video_path	| -v ) videos_path="$2"; shift 2;;
+    --images_path	| -i ) images_path="$2"; shift 2;;
+
     --framerate | -f ) framerate="$2"; shift 2;;
-    --videos    | -v ) videos_path="$2"; shift 2;;
-    --images    | -i ) images_path="$2"; shift 2;;
-    --override_name  | -o ) override_name="$2"; shift 2;;
+    --bitrate	| -b ) bitrate="$2"; shift 2;;
+    --fps	| -F ) fps="$2"; shift 2;;
+
+    --help      | -h ) echo "$manual"; exit 0;;
+    --version   | -V ) echo "$__scriptFile -- Version $__scriptVersion"; exit 0;;
+
     * ) break;;
     esac
 done
+
 if [[ -t 0 && $# -eq 0 ]]; then
     main
     exit 0
@@ -190,3 +250,4 @@ fi
 echo "${@:-$(</dev/stdin)}" | while read line; do
     main "$line"
 done
+
